@@ -5,6 +5,13 @@ const canvasCtx = canvasElement.getContext('2d');
 const stateVal = document.getElementById('state-val');
 const angleVal = document.getElementById('angle-val');
 const feedbackVal = document.getElementById('feedback-val');
+const totalShotsVal = document.getElementById('total-shots-val');
+const formScoreVal = document.getElementById('form-score-val');
+
+// FEATURE 2: Global State Tracking Variables
+let totalShots = 0;
+let goodShots = 0;
+let isDipping = false; // State latch: ensures 1 shot = 1 count
 
 // Calculate 2D joint angle at point B given (A, B, C)
 function calculateAngle(a, b, c) {
@@ -18,10 +25,9 @@ function calculateAngle(a, b, c) {
 
 // FEATURE 1: Text-to-Speech Helper Function
 function speakFeedback(text) {
-  // Check if browser supports speech and isn't currently speaking
   if ('speechSynthesis' in window && !window.speechSynthesis.speaking) {
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.1; // Slightly faster speech for quick athletic cues
+    utterance.rate = 1.1;
     utterance.pitch = 1.0;
     utterance.lang = 'en-US';
     window.speechSynthesis.speak(utterance);
@@ -29,20 +35,17 @@ function speakFeedback(text) {
 }
 
 function onResults(results) {
-  // Set Canvas Dimensions to Match Video Input
   canvasElement.width = videoElement.videoWidth;
   canvasElement.height = videoElement.videoHeight;
 
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
-  // Draw Camera Frame
   canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
   if (results.poseLandmarks) {
     const landmarks = results.poseLandmarks;
 
-    // MediaPipe Pose Landmark Indices: Right Shoulder (12), Right Elbow (14), Right Wrist (16)
+    // Right Shoulder (12), Right Elbow (14), Right Wrist (16)
     const shoulder = landmarks[12];
     const elbow = landmarks[14];
     const wrist = landmarks[16];
@@ -51,26 +54,37 @@ function onResults(results) {
     const elbowAngle = calculateAngle(shoulder, elbow, wrist);
     angleVal.innerText = `${Math.round(elbowAngle)}°`;
 
-    // Basketball Shot State Machine Logic
+    // Basketball Shot State Machine & Rep Counter Logic
     if (wrist.y > shoulder.y) {
+      // Step 1: Player dips / gathers the ball below shoulder height
+      isDipping = true;
       stateVal.innerText = "SET / DIP";
       stateVal.style.color = "#FFB300";
       feedbackVal.innerText = "Gathering ball. Prepare release...";
-    } else if (elbowAngle >= 150 && wrist.y < shoulder.y) {
+    } 
+    else if (isDipping && elbowAngle >= 150 && wrist.y < shoulder.y) {
+      // Step 2: Player releases into full arm extension (Triggers only ONCE per rep)
+      isDipping = false; // Reset latch lock
+      totalShots++;
+      goodShots++; // Increments good form shot count
+
+      const scorePercent = Math.round((goodShots / totalShots) * 100);
+      totalShotsVal.innerText = totalShots;
+      formScoreVal.innerText = `${scorePercent}%`;
+
       stateVal.innerText = "RELEASE";
       stateVal.style.color = "#00E676";
       feedbackVal.innerText = "GOOD FOLLOW-THROUGH! High arc extension.";
       
-      // FEATURE 1 TRIGGER: Speaks feedback out loud through the phone speaker
       speakFeedback("Good follow through");
-
-    } else if (wrist.y <= shoulder.y && elbowAngle < 120) {
+    } 
+    else if (wrist.y <= shoulder.y && elbowAngle < 120) {
       stateVal.innerText = "SET POINT";
       stateVal.style.color = "#2196F3";
       feedbackVal.innerText = "Keep elbow tucked in line with basket.";
     }
 
-    // Draw Pose Connectors and Landmarks using MediaPipe Utilities
+    // Draw Skeleton
     drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, { color: '#00E676', lineWidth: 3 });
     drawLandmarks(canvasCtx, landmarks, { color: '#FF0055', lineWidth: 1, radius: 4 });
   }
@@ -92,7 +106,6 @@ pose.setOptions({
 
 pose.onResults(onResults);
 
-// Start Camera Stream (Handles rear or front phone camera)
 const camera = new Camera(videoElement, {
   onFrame: async () => {
     await pose.send({ image: videoElement });
