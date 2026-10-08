@@ -1,3 +1,10 @@
+// Screen DOM Elements
+const homeScreen = document.getElementById('home-screen');
+const analyzerScreen = document.getElementById('analyzer-screen');
+const btnLaunchAnalyzer = document.getElementById('btn-launch-analyzer');
+const btnBackHome = document.getElementById('btn-back-home');
+
+// Camera & Overlay DOM Elements
 const videoElement = document.getElementById('webcam');
 const canvasElement = document.getElementById('output_canvas');
 const canvasCtx = canvasElement.getContext('2d');
@@ -26,26 +33,32 @@ let lastBallBbox = null;
 let ballTrail = [];
 const MAX_TRAIL_POINTS = 20;
 
-// Initialize Session History on Page Load
+// Load History on Startup
 loadHistoryFromStorage();
+
+// NAVIGATION: Switch between Home and Analyzer views
+btnLaunchAnalyzer.addEventListener('click', () => {
+  homeScreen.classList.add('hidden');
+  analyzerScreen.classList.remove('hidden');
+});
+
+btnBackHome.addEventListener('click', () => {
+  analyzerScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+});
 
 // Load COCO-SSD Model
 cocoSsd.load().then((loadedModel) => {
   objectModel = loadedModel;
   statusBadge.innerText = "Standby";
-  feedbackVal.innerText = "Tap 'Start Tracking' to begin...";
-  btnToggle.innerText = "▶ Start Tracking";
-  btnToggle.disabled = false;
-}).catch((err) => {
+  console.log("TensorFlow.js Model Loaded");
+}).catch(() => {
   statusBadge.innerText = "Pose Only";
-  btnToggle.innerText = "▶ Start Tracking";
-  btnToggle.disabled = false;
 });
 
 // Start / Save Session Button Handler
 btnToggle.addEventListener('click', () => {
   if (!isTrackingActive) {
-    // START SESSION
     isTrackingActive = true;
     totalShots = 0;
     goodShots = 0;
@@ -63,7 +76,6 @@ btnToggle.addEventListener('click', () => {
 
     speakFeedback("Tracking started");
   } else {
-    // END & SAVE SESSION
     if (totalShots > 0) {
       saveSessionToStorage(totalShots, goodShots);
     }
@@ -90,7 +102,7 @@ btnToggle.addEventListener('click', () => {
   }
 });
 
-// Clear History Handler
+// Clear History Button Handler
 btnClearHistory.addEventListener('click', () => {
   localStorage.removeItem('shot_analyzer_history');
   loadHistoryFromStorage();
@@ -109,7 +121,7 @@ function saveSessionToStorage(shots, good) {
 
   let history = JSON.parse(localStorage.getItem('shot_analyzer_history')) || [];
   history.unshift(newEntry);
-  if (history.length > 10) history.pop(); // Keep 10 most recent
+  if (history.length > 10) history.pop();
 
   localStorage.setItem('shot_analyzer_history', JSON.stringify(history));
   loadHistoryFromStorage();

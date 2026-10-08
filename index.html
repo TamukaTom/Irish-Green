@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Basketball Shot Mechanics Analyzer</title>
+  <title>Basketball Shot Mechanics AI</title>
   <link rel="stylesheet" href="style.css">
 
   <!-- MediaPipe JS CDNs -->
@@ -18,54 +18,92 @@
 <body>
 
   <div class="app-container">
+    
+    <!-- Header Navbar -->
     <header class="navbar">
       <h1>🏀 Shot Mechanics AI</h1>
-      <span class="badge" id="status-badge">Loading AI...</span>
+      <span class="badge" id="status-badge">Standby</span>
     </header>
 
-    <div class="viewport">
-      <video id="webcam" playsinline autoplay muted></video>
-      <canvas id="output_canvas"></canvas>
-    </div>
+    <!-- SCREEN 1: HOME PAGE -->
+    <main id="home-screen" class="screen">
+      <section class="hero-card">
+        <h2>Master Your Jump Shot</h2>
+        <p>Real-time computer vision mechanics analysis, ball trajectory tracking, and voice audio coaching.</p>
+        <button id="btn-launch-analyzer" class="btn-primary">🏀 Launch AI Coach</button>
+      </section>
 
-    <!-- UI Overlay Dashboard -->
-    <div class="dashboard">
-      <div class="card">
-        <span class="card-label">SHOT PHASE</span>
-        <span id="state-val" class="card-value">IDLE</span>
-      </div>
-      <div class="card">
-        <span class="card-label">ELBOW ANGLE</span>
-        <span id="angle-val" class="card-value">0°</span>
-      </div>
-      <div class="card">
-        <span class="card-label">TOTAL SHOTS</span>
-        <span id="total-shots-val" class="card-value">0</span>
-      </div>
-      <div class="card">
-        <span class="card-label">FORM SCORE</span>
-        <span id="form-score-val" class="card-value">0%</span>
-      </div>
-      <div class="card feedback-card">
-        <span class="card-label">FEEDBACK</span>
-        <span id="feedback-val" class="card-value-small">Loading models...</span>
-      </div>
+      <!-- Feature Highlights -->
+      <section class="features-grid">
+        <div class="feature-card">
+          <span class="icon">📐</span>
+          <h4>Pose Biomechanics</h4>
+          <p>Tracks 33 body keypoints for instant elbow extension math.</p>
+        </div>
+        <div class="feature-card">
+          <span class="icon">🎯</span>
+          <h4>Arc Trajectory</h4>
+          <p>TF.js object detection plots live flight paths.</p>
+        </div>
+        <div class="feature-card">
+          <span class="icon">🗣️</span>
+          <h4>Voice Feedback</h4>
+          <p>Hands-free speech cues delivered through your phone speaker.</p>
+        </div>
+      </section>
 
-      <div class="controls">
-        <button id="btn-toggle" class="btn-start" disabled>▶ Loading Models...</button>
-      </div>
-
-      <!-- Session History Panel -->
-      <div class="history-panel">
+      <!-- Workout History on Home Page -->
+      <section class="history-panel">
         <div class="history-header">
-          <h3>📜 Workout History</h3>
+          <h3>📜 Recent Workout History</h3>
           <button id="btn-clear-history" class="btn-clear">Clear</button>
         </div>
         <div id="history-list" class="history-list">
           <div class="history-empty">No workouts recorded yet.</div>
         </div>
+      </section>
+    </main>
+
+    <!-- SCREEN 2: LIVE ANALYZER -->
+    <main id="analyzer-screen" class="screen hidden">
+      <div class="analyzer-topbar">
+        <button id="btn-back-home" class="btn-secondary">← Back to Home</button>
       </div>
-    </div>
+
+      <div class="viewport">
+        <video id="webcam" playsinline autoplay muted></video>
+        <canvas id="output_canvas"></canvas>
+      </div>
+
+      <!-- Live Dashboard -->
+      <div class="dashboard">
+        <div class="card">
+          <span class="card-label">SHOT PHASE</span>
+          <span id="state-val" class="card-value">IDLE</span>
+        </div>
+        <div class="card">
+          <span class="card-label">ELBOW ANGLE</span>
+          <span id="angle-val" class="card-value">0°</span>
+        </div>
+        <div class="card">
+          <span class="card-label">TOTAL SHOTS</span>
+          <span id="total-shots-val" class="card-value">0</span>
+        </div>
+        <div class="card">
+          <span class="card-label">FORM SCORE</span>
+          <span id="form-score-val" class="card-value">0%</span>
+        </div>
+        <div class="card feedback-card">
+          <span class="card-label">FEEDBACK</span>
+          <span id="feedback-val" class="card-value-small">Tap "Start Tracking" to begin...</span>
+        </div>
+
+        <div class="controls">
+          <button id="btn-toggle" class="btn-start">▶ Start Tracking</button>
+        </div>
+      </div>
+    </main>
+
   </div>
 
   <script src="app.js"></script>
