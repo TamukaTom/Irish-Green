@@ -1,0 +1,102 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background-color: #121212;
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #333;
+}
+
+.navbar h1 {
+  font-size: 1.1rem;
+}
+
+.badge {
+  background-color: #00e676;
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background-color: #000;
+  overflow: hidden;
+}
+
+#webcam {
+  display: none; /* Processed via Canvas */
+}
+
+#output_canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dashboard {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background-color: #181818;
+  flex-grow: 1;
+}
+
+.card {
+  background-color: #242424;
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.feedback-card {
+  grid-column: span 2;
+  border-left: 4px solid #2196f3;
+}
+
+.card-label {
+  font-size: 0.7rem;
+  color: #aaa;
+  font-weight: 700;
+}
+
+.card-value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #00e676;
+}
+
+.card-value-small {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}

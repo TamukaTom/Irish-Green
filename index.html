@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basketball Shot Mechanics Analyzer</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- MediaPipe JS CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <header class="navbar">
+      <h1>🏀 Shot Mechanics AI</h1>
+      <span class="badge">Live Tracking</span>
+    </header>
+
+    <div class="viewport">
+      <video id="webcam" playsinline></video>
+      <canvas id="output_canvas"></canvas>
+    </div>
+
+    <!-- UI Overlay Dashboard -->
+    <div class="dashboard">
+      <div class="card">
+        <span class="card-label">SHOT PHASE</span>
+        <span id="state-val" class="card-value">IDLE</span>
+      </div>
+      <div class="card">
+        <span class="card-label">ELBOW ANGLE</span>
+        <span id="angle-val" class="card-value">0°</span>
+      </div>
+      <div class="card feedback-card">
+        <span class="card-label">FEEDBACK</span>
+        <span id="feedback-val" class="card-value-small">Position in front of camera...</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
