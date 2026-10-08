@@ -7,11 +7,48 @@ const angleVal = document.getElementById('angle-val');
 const feedbackVal = document.getElementById('feedback-val');
 const totalShotsVal = document.getElementById('total-shots-val');
 const formScoreVal = document.getElementById('form-score-val');
+const statusBadge = document.getElementById('status-badge');
+const btnToggle = document.getElementById('btn-toggle');
 
-// FEATURE 2: Global State Tracking Variables
+// Session State Tracking Variables
+let isTrackingActive = false;
 let totalShots = 0;
 let goodShots = 0;
-let isDipping = false; // State latch: ensures 1 shot = 1 count
+let isDipping = false;
+
+// Button Event Listener to Start or Reset Session
+btnToggle.addEventListener('click', () => {
+  if (!isTrackingActive) {
+    // START SESSION
+    isTrackingActive = true;
+    totalShots = 0;
+    goodShots = 0;
+    isDipping = false;
+
+    totalShotsVal.innerText = "0";
+    formScoreVal.innerText = "0%";
+    statusBadge.innerText = "Tracking Active";
+    statusBadge.classList.add('active');
+
+    btnToggle.innerText = "↺ Reset Session";
+    btnToggle.className = "btn-reset";
+
+    speakFeedback("Tracking started");
+  } else {
+    // RESET SESSION
+    totalShots = 0;
+    goodShots = 0;
+    isDipping = false;
+
+    totalShotsVal.innerText = "0";
+    formScoreVal.innerText = "0%";
+    stateVal.innerText = "IDLE";
+    stateVal.style.color = "#00e676";
+    feedbackVal.innerText = "Session reset. Get in position...";
+
+    speakFeedback("Session reset");
+  }
+});
 
 // Calculate 2D joint angle at point B given (A, B, C)
 function calculateAngle(a, b, c) {
@@ -23,7 +60,7 @@ function calculateAngle(a, b, c) {
   return angle;
 }
 
-// FEATURE 1: Text-to-Speech Helper Function
+// Text-to-Speech Helper Function
 function speakFeedback(text) {
   if ('speechSynthesis' in window && !window.speechSynthesis.speaking) {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -50,41 +87,44 @@ function onResults(results) {
     const elbow = landmarks[14];
     const wrist = landmarks[16];
 
-    // Calculate Shooting Elbow Extension Angle
     const elbowAngle = calculateAngle(shoulder, elbow, wrist);
     angleVal.innerText = `${Math.round(elbowAngle)}°`;
 
-    // Basketball Shot State Machine & Rep Counter Logic
-    if (wrist.y > shoulder.y) {
-      // Step 1: Player dips / gathers the ball below shoulder height
-      isDipping = true;
-      stateVal.innerText = "SET / DIP";
-      stateVal.style.color = "#FFB300";
-      feedbackVal.innerText = "Gathering ball. Prepare release...";
-    } 
-    else if (isDipping && elbowAngle >= 150 && wrist.y < shoulder.y) {
-      // Step 2: Player releases into full arm extension (Triggers only ONCE per rep)
-      isDipping = false; // Reset latch lock
-      totalShots++;
-      goodShots++; // Increments good form shot count
+    // Only run state machine and rep counting when tracking is ACTIVE
+    if (isTrackingActive) {
+      if (wrist.y > shoulder.y) {
+        isDipping = true;
+        stateVal.innerText = "SET / DIP";
+        stateVal.style.color = "#FFB300";
+        feedbackVal.innerText = "Gathering ball. Prepare release...";
+      } 
+      else if (isDipping && elbowAngle >= 150 && wrist.y < shoulder.y) {
+        isDipping = false;
+        totalShots++;
+        goodShots++;
 
-      const scorePercent = Math.round((goodShots / totalShots) * 100);
-      totalShotsVal.innerText = totalShots;
-      formScoreVal.innerText = `${scorePercent}%`;
+        const scorePercent = Math.round((goodShots / totalShots) * 100);
+        totalShotsVal.innerText = totalShots;
+        formScoreVal.innerText = `${scorePercent}%`;
 
-      stateVal.innerText = "RELEASE";
-      stateVal.style.color = "#00E676";
-      feedbackVal.innerText = "GOOD FOLLOW-THROUGH! High arc extension.";
-      
-      speakFeedback("Good follow through");
-    } 
-    else if (wrist.y <= shoulder.y && elbowAngle < 120) {
-      stateVal.innerText = "SET POINT";
-      stateVal.style.color = "#2196F3";
-      feedbackVal.innerText = "Keep elbow tucked in line with basket.";
+        stateVal.innerText = "RELEASE";
+        stateVal.style.color = "#00E676";
+        feedbackVal.innerText = "GOOD FOLLOW-THROUGH! High arc extension.";
+        
+        speakFeedback("Good follow through");
+      } 
+      else if (wrist.y <= shoulder.y && elbowAngle < 120) {
+        stateVal.innerText = "SET POINT";
+        stateVal.style.color = "#2196F3";
+        feedbackVal.innerText = "Keep elbow tucked in line with basket.";
+      }
+    } else {
+      stateVal.innerText = "STANDBY";
+      stateVal.style.color = "#aaa";
+      feedbackVal.innerText = "Tap 'Start Tracking' to begin counting shots.";
     }
 
-    // Draw Skeleton
+    // Draw Pose Landmarks & Skeleton Lines
     drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, { color: '#00E676', lineWidth: 3 });
     drawLandmarks(canvasCtx, landmarks, { color: '#FF0055', lineWidth: 1, radius: 4 });
   }

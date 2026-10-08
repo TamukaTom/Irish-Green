@@ -16,7 +16,7 @@
   <div class="app-container">
     <header class="navbar">
       <h1>🏀 Shot Mechanics AI</h1>
-      <span class="badge">Live Tracking</span>
+      <span class="badge" id="status-badge">Standby</span>
     </header>
 
     <div class="viewport">
@@ -44,7 +44,12 @@
       </div>
       <div class="card feedback-card">
         <span class="card-label">FEEDBACK</span>
-        <span id="feedback-val" class="card-value-small">Position in front of camera...</span>
+        <span id="feedback-val" class="card-value-small">Tap "Start Tracking" to begin...</span>
+      </div>
+
+      <!-- Start / Reset Control Button -->
+      <div class="controls">
+        <button id="btn-toggle" class="btn-start">▶ Start Tracking</button>
       </div>
     </div>
   </div>
