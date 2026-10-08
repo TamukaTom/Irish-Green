@@ -16,6 +16,18 @@ function calculateAngle(a, b, c) {
   return angle;
 }
 
+// FEATURE 1: Text-to-Speech Helper Function
+function speakFeedback(text) {
+  // Check if browser supports speech and isn't currently speaking
+  if ('speechSynthesis' in window && !window.speechSynthesis.speaking) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.1; // Slightly faster speech for quick athletic cues
+    utterance.pitch = 1.0;
+    utterance.lang = 'en-US';
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
 function onResults(results) {
   // Set Canvas Dimensions to Match Video Input
   canvasElement.width = videoElement.videoWidth;
@@ -48,6 +60,10 @@ function onResults(results) {
       stateVal.innerText = "RELEASE";
       stateVal.style.color = "#00E676";
       feedbackVal.innerText = "GOOD FOLLOW-THROUGH! High arc extension.";
+      
+      // FEATURE 1 TRIGGER: Speaks feedback out loud through the phone speaker
+      speakFeedback("Good follow through");
+
     } else if (wrist.y <= shoulder.y && elbowAngle < 120) {
       stateVal.innerText = "SET POINT";
       stateVal.style.color = "#2196F3";
