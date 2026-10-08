@@ -9,6 +9,8 @@ const totalShotsVal = document.getElementById('total-shots-val');
 const formScoreVal = document.getElementById('form-score-val');
 const statusBadge = document.getElementById('status-badge');
 const btnToggle = document.getElementById('btn-toggle');
+const btnClearHistory = document.getElementById('btn-clear-history');
+const historyList = document.getElementById('history-list');
 
 // Session State
 let isTrackingActive = false;
@@ -16,13 +18,16 @@ let totalShots = 0;
 let goodShots = 0;
 let isDipping = false;
 
-// Visual Model & Performance Throttling
+// Visual Model Variables
 let objectModel = null;
 let isDetecting = false;
 let frameCounter = 0;
 let lastBallBbox = null;
 let ballTrail = [];
 const MAX_TRAIL_POINTS = 20;
+
+// Initialize Session History on Page Load
+loadHistoryFromStorage();
 
 // Load COCO-SSD Model
 cocoSsd.load().then((loadedModel) => {
@@ -31,17 +36,16 @@ cocoSsd.load().then((loadedModel) => {
   feedbackVal.innerText = "Tap 'Start Tracking' to begin...";
   btnToggle.innerText = "▶ Start Tracking";
   btnToggle.disabled = false;
-  console.log("TensorFlow.js Model Loaded");
 }).catch((err) => {
-  console.warn("TF.js Model failed to load, running pose-only mode:", err);
   statusBadge.innerText = "Pose Only";
   btnToggle.innerText = "▶ Start Tracking";
   btnToggle.disabled = false;
 });
 
-// Start / Reset Control Button
+// Start / Save Session Button Handler
 btnToggle.addEventListener('click', () => {
   if (!isTrackingActive) {
+    // START SESSION
     isTrackingActive = true;
     totalShots = 0;
     goodShots = 0;
@@ -54,11 +58,16 @@ btnToggle.addEventListener('click', () => {
     statusBadge.innerText = "Tracking Active";
     statusBadge.classList.add('active');
 
-    btnToggle.innerText = "↺ Reset Session";
+    btnToggle.innerText = "💾 Save & End Session";
     btnToggle.className = "btn-reset";
 
     speakFeedback("Tracking started");
   } else {
+    // END & SAVE SESSION
+    if (totalShots > 0) {
+      saveSessionToStorage(totalShots, goodShots);
+    }
+
     isTrackingActive = false;
     totalShots = 0;
     goodShots = 0;
@@ -72,14 +81,56 @@ btnToggle.addEventListener('click', () => {
     stateVal.style.color = "#00e676";
     statusBadge.innerText = "Standby";
     statusBadge.classList.remove('active');
-    feedbackVal.innerText = "Session reset. Tap 'Start Tracking' to begin...";
+    feedbackVal.innerText = "Session saved! Tap 'Start Tracking' to begin new workout.";
 
     btnToggle.innerText = "▶ Start Tracking";
     btnToggle.className = "btn-start";
 
-    speakFeedback("Session reset");
+    speakFeedback("Session saved");
   }
 });
+
+// Clear History Handler
+btnClearHistory.addEventListener('click', () => {
+  localStorage.removeItem('shot_analyzer_history');
+  loadHistoryFromStorage();
+});
+
+// LocalStorage Helper Functions
+function saveSessionToStorage(shots, good) {
+  const accuracy = Math.round((good / shots) * 100);
+  const now = new Date();
+  
+  const newEntry = {
+    date: `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`,
+    total: shots,
+    accuracy: accuracy
+  };
+
+  let history = JSON.parse(localStorage.getItem('shot_analyzer_history')) || [];
+  history.unshift(newEntry);
+  if (history.length > 10) history.pop(); // Keep 10 most recent
+
+  localStorage.setItem('shot_analyzer_history', JSON.stringify(history));
+  loadHistoryFromStorage();
+}
+
+function loadHistoryFromStorage() {
+  const history = JSON.parse(localStorage.getItem('shot_analyzer_history')) || [];
+  
+  if (history.length === 0) {
+    historyList.innerHTML = `<div class="history-empty">No workouts recorded yet.</div>`;
+    return;
+  }
+
+  historyList.innerHTML = history.map(item => `
+    <div class="history-item">
+      <span class="history-date">${item.date}</span>
+      <span>${item.total} Reps</span>
+      <span class="history-score">${item.accuracy}% Form</span>
+    </div>
+  `).join('');
+}
 
 function calculateAngle(a, b, c) {
   const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -97,7 +148,6 @@ function speakFeedback(text) {
   }
 }
 
-// Throttled Object Detection (Runs asynchronously every 6 frames)
 async function runThrottledBallDetection() {
   if (!objectModel || isDetecting || !videoElement.videoWidth) return;
   
@@ -120,7 +170,6 @@ async function runThrottledBallDetection() {
   isDetecting = false;
 }
 
-// Draw Ball & Flight Trajectory Arc
 function drawBallAndTrajectory() {
   if (lastBallBbox) {
     const { x, y, w, h, score } = lastBallBbox;
@@ -152,11 +201,8 @@ function onResults(results) {
 
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  
-  // Render Camera Frame First
   canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-  // Run Object Detection every 6 frames to prevent mobile GPU lockups
   frameCounter++;
   if (isTrackingActive && frameCounter % 6 === 0) {
     runThrottledBallDetection();
@@ -166,7 +212,6 @@ function onResults(results) {
     drawBallAndTrajectory();
   }
 
-  // Skeletal Pose Tracking
   if (results.poseLandmarks) {
     const landmarks = results.poseLandmarks;
     const shoulder = landmarks[12];
@@ -210,7 +255,6 @@ function onResults(results) {
   canvasCtx.restore();
 }
 
-// MediaPipe Pose Initialization
 const pose = new Pose({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
 });

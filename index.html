@@ -24,7 +24,6 @@
     </header>
 
     <div class="viewport">
-      <!-- Added autoplay & muted for mobile browser compatibility -->
       <video id="webcam" playsinline autoplay muted></video>
       <canvas id="output_canvas"></canvas>
     </div>
@@ -54,6 +53,17 @@
 
       <div class="controls">
         <button id="btn-toggle" class="btn-start" disabled>▶ Loading Models...</button>
+      </div>
+
+      <!-- Session History Panel -->
+      <div class="history-panel">
+        <div class="history-header">
+          <h3>📜 Workout History</h3>
+          <button id="btn-clear-history" class="btn-clear">Clear</button>
+        </div>
+        <div id="history-list" class="history-list">
+          <div class="history-empty">No workouts recorded yet.</div>
+        </div>
       </div>
     </div>
   </div>
