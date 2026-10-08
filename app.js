@@ -10,28 +10,36 @@ const formScoreVal = document.getElementById('form-score-val');
 const statusBadge = document.getElementById('status-badge');
 const btnToggle = document.getElementById('btn-toggle');
 
-// Session & AI Model Variables
+// Session State
 let isTrackingActive = false;
 let totalShots = 0;
 let goodShots = 0;
 let isDipping = false;
 
-// Visual Model Variables
+// Visual Model & Performance Throttling
 let objectModel = null;
-let ballTrail = []; // Stores recent (x, y) centroids of the basketball to render trajectory
-const MAX_TRAIL_POINTS = 25;
+let isDetecting = false;
+let frameCounter = 0;
+let lastBallBbox = null;
+let ballTrail = [];
+const MAX_TRAIL_POINTS = 20;
 
-// Load COCO-SSD Object Detection Model
+// Load COCO-SSD Model
 cocoSsd.load().then((loadedModel) => {
   objectModel = loadedModel;
   statusBadge.innerText = "Standby";
   feedbackVal.innerText = "Tap 'Start Tracking' to begin...";
   btnToggle.innerText = "▶ Start Tracking";
   btnToggle.disabled = false;
-  console.log("TensorFlow.js COCO-SSD Model Loaded!");
+  console.log("TensorFlow.js Model Loaded");
+}).catch((err) => {
+  console.warn("TF.js Model failed to load, running pose-only mode:", err);
+  statusBadge.innerText = "Pose Only";
+  btnToggle.innerText = "▶ Start Tracking";
+  btnToggle.disabled = false;
 });
 
-// Button Click Event
+// Start / Reset Control Button
 btnToggle.addEventListener('click', () => {
   if (!isTrackingActive) {
     isTrackingActive = true;
@@ -39,6 +47,7 @@ btnToggle.addEventListener('click', () => {
     goodShots = 0;
     isDipping = false;
     ballTrail = [];
+    lastBallBbox = null;
 
     totalShotsVal.innerText = "0";
     formScoreVal.innerText = "0%";
@@ -55,6 +64,7 @@ btnToggle.addEventListener('click', () => {
     goodShots = 0;
     isDipping = false;
     ballTrail = [];
+    lastBallBbox = null;
 
     totalShotsVal.innerText = "0";
     formScoreVal.innerText = "0%";
@@ -71,14 +81,12 @@ btnToggle.addEventListener('click', () => {
   }
 });
 
-// Calculate 2D joint angle
 function calculateAngle(a, b, c) {
   const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
   let angle = Math.abs((radians * 180.0) / Math.PI);
   return angle > 180.0 ? 360.0 - angle : angle;
 }
 
-// Speech Synthesis Helper
 function speakFeedback(text) {
   if ('speechSynthesis' in window && !window.speechSynthesis.speaking) {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -89,77 +97,78 @@ function speakFeedback(text) {
   }
 }
 
-// Detect Basketball using TensorFlow.js COCO-SSD
-async function detectBall() {
-  if (!objectModel || !videoElement.videoWidth) return;
-
-  const predictions = await objectModel.detect(videoElement);
+// Throttled Object Detection (Runs asynchronously every 6 frames)
+async function runThrottledBallDetection() {
+  if (!objectModel || isDetecting || !videoElement.videoWidth) return;
   
-  // Look for detected 'sports ball' or 'ball'
-  const ballPrediction = predictions.find(
-    (p) => p.class === 'sports ball' || p.class === 'ball'
-  );
+  isDetecting = true;
+  try {
+    const predictions = await objectModel.detect(videoElement);
+    const ball = predictions.find(p => p.class === 'sports ball' || p.class === 'ball');
 
-  if (ballPrediction) {
-    const [x, y, width, height] = ballPrediction.bbox;
-    const centerX = x + width / 2;
-    const centerY = y + height / 2;
-
-    // Store centroid for trajectory line
-    ballTrail.push({ x: centerX, y: centerY });
-    if (ballTrail.length > MAX_TRAIL_POINTS) {
-      ballTrail.shift();
+    if (ball) {
+      const [x, y, w, h] = ball.bbox;
+      lastBallBbox = { x, y, w, h, score: ball.score };
+      ballTrail.push({ x: x + w / 2, y: y + h / 2 });
+      if (ballTrail.length > MAX_TRAIL_POINTS) ballTrail.shift();
+    } else {
+      lastBallBbox = null;
     }
+  } catch (e) {
+    console.error("Ball detection error:", e);
+  }
+  isDetecting = false;
+}
 
-    // Draw Basketball Bounding Box
-    canvasCtx.strokeStyle = '#FF6D00'; // Basketball Orange
+// Draw Ball & Flight Trajectory Arc
+function drawBallAndTrajectory() {
+  if (lastBallBbox) {
+    const { x, y, w, h, score } = lastBallBbox;
+    canvasCtx.strokeStyle = '#FF6D00';
     canvasCtx.lineWidth = 3;
-    canvasCtx.strokeRect(x, y, width, height);
-
+    canvasCtx.strokeRect(x, y, w, h);
     canvasCtx.fillStyle = '#FF6D00';
     canvasCtx.font = '14px sans-serif';
-    canvasCtx.fillText(
-      `Basketball (${Math.round(ballPrediction.score * 100)}%)`,
-      x,
-      y > 10 ? y - 5 : 10
-    );
+    canvasCtx.fillText(`Basketball (${Math.round(score * 100)}%)`, x, y > 10 ? y - 5 : 10);
+  }
+
+  if (ballTrail.length >= 2) {
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(ballTrail[0].x, ballTrail[0].y);
+    for (let i = 1; i < ballTrail.length; i++) {
+      canvasCtx.lineTo(ballTrail[i].x, ballTrail[i].y);
+    }
+    canvasCtx.strokeStyle = '#FFD600';
+    canvasCtx.lineWidth = 4;
+    canvasCtx.stroke();
   }
 }
 
-// Draw Ball Trajectory Arc
-function drawBallTrajectory() {
-  if (ballTrail.length < 2) return;
+function onResults(results) {
+  if (!videoElement.videoWidth) return;
 
-  canvasCtx.beginPath();
-  canvasCtx.moveTo(ballTrail[0].x, ballTrail[0].y);
-
-  for (let i = 1; i < ballTrail.length; i++) {
-    canvasCtx.lineTo(ballTrail[i].x, ballTrail[i].y);
-  }
-
-  canvasCtx.strokeStyle = '#FFD600'; // Bright Yellow Trajectory Arc
-  canvasCtx.lineWidth = 4;
-  canvasCtx.stroke();
-}
-
-async function onResults(results) {
   canvasElement.width = videoElement.videoWidth;
   canvasElement.height = videoElement.videoHeight;
 
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  
+  // Render Camera Frame First
   canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-  // 1. Run Visual Ball Detection
-  if (isTrackingActive) {
-    await detectBall();
-    drawBallTrajectory();
+  // Run Object Detection every 6 frames to prevent mobile GPU lockups
+  frameCounter++;
+  if (isTrackingActive && frameCounter % 6 === 0) {
+    runThrottledBallDetection();
   }
 
-  // 2. Run Pose Skeleton Biomechanics
+  if (isTrackingActive) {
+    drawBallAndTrajectory();
+  }
+
+  // Skeletal Pose Tracking
   if (results.poseLandmarks) {
     const landmarks = results.poseLandmarks;
-
     const shoulder = landmarks[12];
     const elbow = landmarks[14];
     const wrist = landmarks[16];
@@ -184,7 +193,7 @@ async function onResults(results) {
 
         stateVal.innerText = "RELEASE";
         stateVal.style.color = "#00E676";
-        feedbackVal.innerText = "GOOD FOLLOW-THROUGH! Ball arc tracked.";
+        feedbackVal.innerText = "GOOD FOLLOW-THROUGH!";
 
         speakFeedback("Good follow through");
       } else if (wrist.y <= shoulder.y && elbowAngle < 120) {
@@ -194,7 +203,6 @@ async function onResults(results) {
       }
     }
 
-    // Draw Skeleton
     drawConnectors(canvasCtx, landmarks, POSE_CONNECTIONS, { color: '#00E676', lineWidth: 3 });
     drawLandmarks(canvasCtx, landmarks, { color: '#FF0055', lineWidth: 1, radius: 4 });
   }
@@ -202,7 +210,7 @@ async function onResults(results) {
   canvasCtx.restore();
 }
 
-// Initialize MediaPipe Pose Model
+// MediaPipe Pose Initialization
 const pose = new Pose({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
 });

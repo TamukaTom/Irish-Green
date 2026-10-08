@@ -10,17 +10,22 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+  <!-- TensorFlow.js & COCO-SSD CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 </head>
 <body>
 
   <div class="app-container">
     <header class="navbar">
       <h1>🏀 Shot Mechanics AI</h1>
-      <span class="badge" id="status-badge">Standby</span>
+      <span class="badge" id="status-badge">Loading AI...</span>
     </header>
 
     <div class="viewport">
-      <video id="webcam" playsinline></video>
+      <!-- Added autoplay & muted for mobile browser compatibility -->
+      <video id="webcam" playsinline autoplay muted></video>
       <canvas id="output_canvas"></canvas>
     </div>
 
@@ -44,12 +49,11 @@
       </div>
       <div class="card feedback-card">
         <span class="card-label">FEEDBACK</span>
-        <span id="feedback-val" class="card-value-small">Tap "Start Tracking" to begin...</span>
+        <span id="feedback-val" class="card-value-small">Loading models...</span>
       </div>
 
-      <!-- Start / Reset Control Button -->
       <div class="controls">
-        <button id="btn-toggle" class="btn-start">▶ Start Tracking</button>
+        <button id="btn-toggle" class="btn-start" disabled>▶ Loading Models...</button>
       </div>
     </div>
   </div>
